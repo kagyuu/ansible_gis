@@ -1,0 +1,10 @@
+---
+- name: GIS
+  hosts: gis
+  become: yes
+  vars_files:
+    - proxy.yml
+  environment: "{{ proxy_env }}"
+  roles:
+    - ../ansible_common/common
+    - { role: postgis, db_name: gis, db_passwd: password }

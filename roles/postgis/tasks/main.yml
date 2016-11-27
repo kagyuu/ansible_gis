@@ -1,0 +1,101 @@
+---
+# This playbook is based on "An almost idiot's guide to install PostgreSQL 9.5, PostGIS 2.2 and pgRouting 2.1.0 with Yum"
+# http://www.postgresonline.com/journal/archives/362-An-almost-idiots-guide-to-install-PostgreSQL-9.5,-PostGIS-2.2-and-pgRouting-2.1.0-with-Yum.html
+
+# see https://yum.postgresql.org/repopackages.php
+- name: Install PostgreSQL yum site
+  yum: name=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm state=present
+
+- name: Install PostgreSQL
+  yum: name={{ item }}  state=present
+  with_items:
+    - postgresql96
+    - postgresql96-server
+    - postgresql96-libs
+    - postgresql96-contrib
+    - postgresql96-devel
+    - postgis2_96
+    - postgis2_96-client
+    - ogr_fdw96
+    - pgrouting_96
+    - python-psycopg2
+
+- name: PostgreSQL initdb
+  command:
+    /usr/pgsql-9.6/bin/postgresql96-setup initdb
+  register:
+    initdb_result
+  failed_when: initdb_result.rc not in [0, 1]
+  changed_when: initdb_result.rc == 0
+
+- name: append access settings
+  lineinfile:
+    dest=/var/lib/pgsql/9.6/data/pg_hba.conf
+    insertafter="#[ ]+TYPE[ ]+DATABASE[ ]+USER[ ]+ADDRESS[ ]+METHOD"
+    line={{ item }}
+  with_items:
+    - 'host    {{ db_name }}         {{ db_name }}         127.0.0.1/32            md5'
+    - 'host    {{ db_name }}         {{ db_name }}         ::1/128                 md5'
+
+- name: PostgreSQL service setup
+  service:
+    name="postgresql-9.6"
+    state=restarted
+    enabled=yes
+
+- name: Installing adminpack
+  sudo: yes
+  sudo_user: postgres
+  command:
+    /usr/pgsql-9.6/bin/psql -p 5432 -c "CREATE EXTENSION adminpack;"
+  ignore_errors: yes
+
+- name: Create db
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db:
+    name={{ db_name }}
+    encoding='UTF-8'
+    lc_collate='ja_JP.UTF-8'
+    lc_ctype='ja_JP.UTF-8'
+    template='template0'
+
+- name: create user
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user:
+    db={{ db_name }}
+    name={{ db_name }}
+    password={{ db_passwd }}
+    priv=ALL
+    state=present
+    login_user=postgres
+
+- name: Installing gis extension to {{ db_name }}
+  sudo: yes
+  sudo_user: postgres
+  command:
+    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "{{ item }}"
+  with_items:
+    - "CREATE EXTENSION postgis;"
+    - "CREATE EXTENSION postgis_topology;"
+    - "CREATE EXTENSION ogr_fdw;"
+    - "CREATE EXTENSION pgrouting;"
+
+- name: Check Postgis Status
+  sudo: yes
+  sudo_user: postgres
+  command:
+    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "SELECT postgis_full_version();"
+  register: postgis_result
+
+- debug: var=postgis_result.stdout_lines
+
+- name: Check Pgroute Status
+  sudo: yes
+  sudo_user: postgres
+  command:
+    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "SELECT * FROM pgr_version();"
+  register: pgroot_result
+
+- debug: var=pgroot_result.stdout_lines
