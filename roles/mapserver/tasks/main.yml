@@ -1,0 +1,167 @@
+---
+# CentOS6 provides mapserver in yum repository. But CentOS7 put an end to publish.
+# So, we must compile mapserver.
+# http://mapserver.org/installation/unix.html
+
+- name: Install apache
+  yum: name={{ item }} state=present
+  with_items:
+    - httpd
+    - ipa-gothic-fonts.noarch # Japanese Gothic-typeface OpenType font by IPA
+    - ipa-mincho-fonts.noarch # Japanese Mincho-typeface OpenType font by IPA
+    - ipa-pgothic-fonts.noarch # Japanese Proportional Gothic-typeface OpenType font by IPA
+    - ipa-pmincho-fonts.noarch # Japanese Proportional Mincho-typeface OpenType font by IPA
+
+- name: Install build tools
+  yum: name={{ item }} state=present
+  with_items:
+    - cmake
+    - gcc
+    - gcc-c++
+    - swig
+    - python-devel
+    - java-1.8.0-openjdk-devel
+    - httpd-devel
+
+- name: Install required libraries for mapserver
+  yum: name={{ item }} state=present
+  with_items:
+    # Required External Libraries
+    - libpng
+    - freetype
+    - libjpeg
+    - libgeotiff
+    - zlib
+    # Highly Recommended Libraries¶
+    - proj
+    - proj-epsg
+    - libcurl
+    - gdal
+    # Optional External Libraries
+    - geos
+    - libxml2
+    - giflib
+    - fcgi
+    - cairo
+    - libxslt
+    - openssl
+    - librsvg2
+    - pixman
+    # non ascii characters
+    - fribidi
+    - harfbuzz
+
+- yum: name="{{ item }}-devel" state=present
+  with_items:
+    # Required External Libraries
+    - libpng
+    - freetype
+    - libjpeg
+    - libgeotiff
+    - zlib
+    # Highly Recommended Libraries¶
+    - proj
+    # - proj-epsg
+    - libcurl
+    - gdal
+    # Optional External Libraries
+    - geos
+    - libxml2
+    - giflib
+    - fcgi
+    - cairo
+    - libxslt
+    - openssl
+    - librsvg2
+    - pixman
+    # non ascii characters
+    - fribidi
+    - harfbuzz
+
+- name: Check whether mapserver was installed or not
+  stat: path=/usr/local/bin/mapserver
+  register: mapserver
+
+- stat: path={{ src_dir }}/{{ mapserver_version }}.tar.gz
+  register: tarball
+  when: not mapserver.stat.exists
+
+- name: Download mapserver source
+  get_url:
+    url: http://download.osgeo.org/mapserver/{{ mapserver_version }}.tar.gz
+    dest: "{{ src_dir }}"
+  when: (not mapserver.stat.exists) and (not tarball.stat.exists)
+
+- name: Expand mapserver source
+  command:
+    chdir={{ src_dir }}
+    tar xf {{ mapserver_version }}.tar.gz
+  when: not mapserver.stat.exists
+
+- name: Create work directory for building mapserver
+  file: path={{ src_dir }}/{{ mapserver_version }}/build state=absent force=yes
+  ignore_errors: yes
+
+- name: Create work directory for building mapserver
+  file: path={{ src_dir }}/{{ mapserver_version }}/build state=directory
+
+- name: Configure mapserver
+  command:
+    chdir={{ src_dir }}/{{ mapserver_version }}/build
+    cmake -DCMAKE_PREFIX_PATH=/usr/pgsql-9.6 \
+    -DWITH_CURL=ON \
+    -DWITH_RSVG=ON \
+    -DWITH_PIXMAN=ON \
+    -DWITH_CLIENT_WFS=ON \
+    -DWITH_CLIENT_WMS=ON \
+    -DWITH_SOS=ON \
+    -DWITH_KML=ON \
+    -DWITH_XMLMAPFILE=ON \
+    -DWITH_POSTGIS=ON \
+    -DWITH_PYTHON=ON \
+    -DWITH_JAVA=ON
+    ../
+  when: not mapserver.stat.exists
+
+- name: Make mapserver
+  command:
+    chdir={{ src_dir }}/{{ mapserver_version }}/build
+    make
+  when: not mapserver.stat.exists
+
+- name: Install mapserver
+  command:
+    chdir={{ src_dir }}/{{ mapserver_version }}/build
+    make install
+  when: not mapserver.stat.exists
+
+- name: Create symbolic link
+  file: src=/usr/local/bin/mapserv dest=/var/www/cgi-bin/mapserv state=link mode="o+x"
+
+- name: Check whether httpd.conf contains "LD_LIBRARY_PATH"
+  command:
+    grep LD_LIBRARY_PATH /etc/httpd/conf/httpd.conf
+  register:
+    check_mapserver_settings
+  failed_when: check_mapserver_settings.rc not in [0, 1]
+  changed_when: False
+
+# To Create the patch file:
+# 1. login remote redmine server
+# 2. backup httpd.conf to httpd.conf.org
+# 3. change httpd.conf
+# 4. exit redmine server to ansible host
+# 5. run remote diff command from ansible host
+#    $ vagrant ssh redmine -- sudo diff /etc/httpd/conf/httpd.conf.org /etc/httpd/conf/httpd.conf > httpd.conf.patch
+- name: apply patch to /etc/httpd/conf/httpd.conf
+  patch: >
+    src=httpd.conf.patch
+    dest=/etc/httpd/conf/httpd.conf
+    backup=yes
+  when: check_mapserver_settings.rc == 1
+
+- name: Restart apache
+  service:
+    name=httpd
+    state=restarted
+    enabled=yes

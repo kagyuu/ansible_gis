@@ -99,3 +99,7 @@
   register: pgroot_result
 
 - debug: var=pgroot_result.stdout_lines
+
+- firewalld: permanent=True port={{ item }} state=enabled permanent=yes
+  with_items:
+    - 5432/tcp
