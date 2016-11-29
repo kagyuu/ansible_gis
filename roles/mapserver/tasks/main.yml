@@ -86,10 +86,12 @@
   register: tarball
   when: not mapserver.stat.exists
 
+# default timeout is 10sec, but its too tight for osgeo.org
 - name: Download mapserver source
   get_url:
     url: http://download.osgeo.org/mapserver/{{ mapserver_version }}.tar.gz
     dest: "{{ src_dir }}"
+    timeout: 60
   when: (not mapserver.stat.exists) and (not tarball.stat.exists)
 
 - name: Expand mapserver source
@@ -152,7 +154,7 @@
 # 3. change httpd.conf
 # 4. exit redmine server to ansible host
 # 5. run remote diff command from ansible host
-#    $ vagrant ssh redmine -- sudo diff /etc/httpd/conf/httpd.conf.org /etc/httpd/conf/httpd.conf > httpd.conf.patch
+#    $ vagrant ssh gis -- sudo diff /etc/httpd/conf/httpd.conf.org /etc/httpd/conf/httpd.conf > httpd.conf.patch
 - name: apply patch to /etc/httpd/conf/httpd.conf
   patch: >
     src=httpd.conf.patch

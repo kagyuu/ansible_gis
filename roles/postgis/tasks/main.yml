@@ -3,8 +3,14 @@
 # http://www.postgresonline.com/journal/archives/362-An-almost-idiots-guide-to-install-PostgreSQL-9.5,-PostGIS-2.2-and-pgRouting-2.1.0-with-Yum.html
 
 # see https://yum.postgresql.org/repopackages.php
+# I know the yum task can download RPM. But the yum task can't download through http-proxy.
 - name: Install PostgreSQL yum site
-  yum: name=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm state=present
+  get_url:
+    url: https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
+    dest: /tmp
+    validate_certs: false
+
+- yum: name=/tmp/pgdg-centos96-9.6-3.noarch.rpm state=present
 
 - name: Install PostgreSQL
   yum: name={{ item }}  state=present
