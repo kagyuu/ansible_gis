@@ -9,3 +9,5 @@
     - ../ansible_common/common
     - { role: postgis, db_name: gis, db_passwd: password }
     - mapserver
+    - ../ansible_common/maven
+    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp"] }
