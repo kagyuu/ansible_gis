@@ -7,7 +7,22 @@
   environment: "{{ proxy_env }}"
   roles:
     - ../ansible_common/common
+    - ../ansible_common/maven
     - { role: postgis, db_name: gis, db_passwd: password }
     - mapserver
-    - ../ansible_common/maven
-    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp"] }
+    - ../ansible_common/glassfish
+    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp","4848/tcp","8080/tcp"] }
+  post_tasks:
+    # post_tasks run after handler was invoked.
+    - name: deploy jdbc drivers to glassfish
+      - command:
+          find /usr/pgsql-*/jdbc/*.jar -exec cp -fv {} /opt/glassfish4/glassfish/domains/domain1/lib/ \;
+
+    - name: restart glassfish
+      service:
+        name=glassfish
+        state=restarted
+        enabled=yes
+
+    - name: create glassfish datasource
+    - name: create glassfish jms

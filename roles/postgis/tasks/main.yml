@@ -6,29 +6,29 @@
 # I know the yum task can download RPM. But the yum task can't download through http-proxy.
 - name: Install PostgreSQL yum site
   get_url:
-    url: https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
+    url: https://download.postgresql.org/pub/repos/yum/{{ PG_VER }}.{{ PG_REV }}/redhat/rhel-7-x86_64/pgdg-centos{{ PG_VER }}{{ PG_REV }}-{{ PG_VER }}.{{ PG_REV }}-3.noarch.rpm
     dest: /tmp
     validate_certs: false
 
-- yum: name=/tmp/pgdg-centos96-9.6-3.noarch.rpm state=present
+- yum: name=/tmp/pgdg-centos{{ PG_VER }}{{ PG_REV }}-{{ PG_VER }}.{{ PG_REV }}-3.noarch.rpm state=present
 
 - name: Install PostgreSQL
   yum: name={{ item }}  state=present
   with_items:
-    - postgresql96
-    - postgresql96-server
-    - postgresql96-libs
-    - postgresql96-contrib
-    - postgresql96-devel
-    - postgis2_96
-    - postgis2_96-client
-    - ogr_fdw96
-    - pgrouting_96
+    - postgresql{{ PG_VER }}{{ PG_REV }}
+    - postgresql{{ PG_VER }}{{ PG_REV }}-server
+    - postgresql{{ PG_VER }}{{ PG_REV }}-libs
+    - postgresql{{ PG_VER }}{{ PG_REV }}-contrib
+    - postgresql{{ PG_VER }}{{ PG_REV }}-devel
+    - postgis2_{{ PG_VER }}{{ PG_REV }}
+    - postgis2_{{ PG_VER }}{{ PG_REV }}-client
+    - ogr_fdw{{ PG_VER }}{{ PG_REV }}
+    - pgrouting_{{ PG_VER }}{{ PG_REV }}
     - python-psycopg2
 
 - name: PostgreSQL initdb
   command:
-    /usr/pgsql-9.6/bin/postgresql96-setup initdb
+    /usr/pgsql-{{ PG_VER }}.{{ PG_REV }}/bin/postgresql{{ PG_VER }}{{ PG_REV }}-setup initdb
   register:
     initdb_result
   failed_when: initdb_result.rc not in [0, 1]
@@ -36,7 +36,7 @@
 
 - name: append access settings
   lineinfile:
-    dest=/var/lib/pgsql/9.6/data/pg_hba.conf
+    dest=/var/lib/pgsql/{{ PG_VER }}.{{ PG_REV }}/data/pg_hba.conf
     insertafter="#[ ]+TYPE[ ]+DATABASE[ ]+USER[ ]+ADDRESS[ ]+METHOD"
     line={{ item }}
   with_items:
@@ -45,7 +45,7 @@
 
 - name: PostgreSQL service setup
   service:
-    name="postgresql-9.6"
+    name="postgresql-{{ PG_VER }}.{{ PG_REV }}"
     state=restarted
     enabled=yes
 
@@ -53,7 +53,7 @@
   sudo: yes
   sudo_user: postgres
   command:
-    /usr/pgsql-9.6/bin/psql -p 5432 -c "CREATE EXTENSION adminpack;"
+    /usr/pgsql-{{ PG_VER }}.{{ PG_REV }}/bin/psql -p 5432 -c "CREATE EXTENSION adminpack;"
   ignore_errors: yes
 
 - name: Create db
@@ -81,7 +81,7 @@
   sudo: yes
   sudo_user: postgres
   command:
-    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "{{ item }}"
+    /usr/pgsql-{{ PG_VER }}.{{ PG_REV }}/bin/psql -p 5432 -d {{ db_name }} -c "{{ item }}"
   with_items:
     - "CREATE EXTENSION postgis;"
     - "CREATE EXTENSION postgis_topology;"
@@ -92,7 +92,7 @@
   sudo: yes
   sudo_user: postgres
   command:
-    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "SELECT postgis_full_version();"
+    /usr/pgsql-{{ PG_VER }}.{{ PG_REV }}/bin/psql -p 5432 -d {{ db_name }} -c "SELECT postgis_full_version();"
   register: postgis_result
 
 - debug: var=postgis_result.stdout_lines
@@ -101,7 +101,9 @@
   sudo: yes
   sudo_user: postgres
   command:
-    /usr/pgsql-9.6/bin/psql -p 5432 -d {{ db_name }} -c "SELECT * FROM pgr_version();"
+    /usr/pgsql-{{ PG_VER }}.{{ PG_REV }}/bin/psql -p 5432 -d {{ db_name }} -c "SELECT * FROM pgr_version();"
   register: pgroot_result
 
 - debug: var=pgroot_result.stdout_lines
+
+- include: tasks/jdbc.yml

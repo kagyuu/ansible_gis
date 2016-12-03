@@ -1,3 +1,5 @@
 ---
-postgres_version: 96
-postgres_revision: 9.6
+# PostgreSQL version
+PG_VER: "9"
+PG_REV: "6"
+src_dir: /usr/local/src
