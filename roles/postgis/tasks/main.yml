@@ -93,6 +93,9 @@
     - "CREATE EXTENSION postgis_topology;"
     - "CREATE EXTENSION ogr_fdw;"
     - "CREATE EXTENSION pgrouting;"
+    - "grant usage on schema topology to {{ db_name }};"
+    - "grant all on all tables in schema topology to {{ db_name }};"
+    - "grant usage, select on all sequences in schema topology to {{ db_name }};"
 
 - name: Check Postgis Status
   sudo: yes
