@@ -1,0 +1,71 @@
+---
+- name: GIS
+  hosts: gis
+  become: yes
+  vars_files:
+    - proxy.yml
+  environment: "{{ proxy_env }}"
+  roles:
+    - ../ansible_common/glassfish
+    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp","4848/tcp","8080/tcp"] }
+
+  post_tasks:
+    # post_tasks run after handler was invoked.
+    - name: deploy jdbc drivers to glassfish
+      command:
+          find "/usr/pgsql-9.6/jdbc/" -name *.jar -exec cp -fv {} "/opt/glassfish4/glassfish/domains/domain1/lib/" \;
+
+    - name: restart glassfish
+      service:
+        name=glassfish
+        state=restarted
+        enabled=yes
+
+    # cf. Oracle GlassFish Server 3.1.2 Section 1: asadmin Utility Subcommands
+    # https://docs.oracle.com/cd/E26576_01/doc.312/e24938/manvol1.htm#GSRFM443
+    - name: create glassfish connection pool
+      expect:
+        command: >
+          /opt/glassfish4/bin/asadmin create-jdbc-connection-pool
+          --datasourceclassname=org.postgresql.ds.PGConnectionPoolDataSource
+          --restype=javax.sql.ConnectionPoolDataSource
+          --steadypoolsize=10
+          --maxpoolsize=80
+          --poolresize=5
+          --property serverName=localhost:portNumber=5432:databaseName=gis:user=gis:password=password
+          app-connection-pool
+        responses:
+          # These response messages is regex. So, we must escape [ and ]
+          # if these are not control characters of regex.
+          "Do you trust the above certificate \\[y|N\\] -->": "y"
+      register: conpool
+
+    - debug: var=conpool.stdout_lines
+
+    - name: create glassfish datasource
+      command: >
+        /opt/glassfish4/bin/asadmin create-jdbc-resource
+        --connectionpoolid app-connection-pool
+        jdbc/sample
+      register: datasource
+
+    - debug: var=datasource.stdout_lines
+
+    - name: create glassfish jms
+      command: >
+        /opt/glassfish4/bin/asadmin create-jms-resource
+        --restype javax.jms.Queue
+        --property Name=myQueuePhysicalDestination
+        jms/myQueue
+      register: queue
+
+    - debug: var=queue.stdout_lines
+
+    - name: create glassfish jms connection factory
+      command: >
+        /opt/glassfish4/bin/asadmin create-jms-resource
+        --restype javax.jms.QueueConnectionFactory
+        jms/myQueueConnectionFactory
+      register: queueConFactory
+
+    - debug: var=queueConFactory.stdout_lines

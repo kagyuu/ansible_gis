@@ -69,9 +69,6 @@
   register: tarball
   when: not mapserver.stat.exists
 
-##########
-# mapserver
-
 # default timeout is 10sec, but its too tight for osgeo.org
 - name: Download mapserver source
   get_url:
@@ -126,11 +123,10 @@
 - name: Create symbolic link
   file: src=/usr/local/bin/mapserv dest=/var/www/cgi-bin/mapserv state=link mode="o+x"
 
-- name: Create the directory that contains mapfile
-  file: path=/opt/maps state=directory owner=apache group=apache
+- name: Check whether mapcache was installed or not
+  stat: path=/usr/local/bin/mapcache
+  register: mapcache
 
-##########
-# mapcache
 - name: Download mapcache source
   git:
     repo=https://github.com/mapserver/mapcache.git
@@ -142,36 +138,28 @@
 - name: Configure mapcache
   command:
     chdir={{ src_dir }}/mapcache/build
-    cmake .. -DWITH_MEMCACHE=1 -DWITH_BERKELEY_DB=1
+    cmake .. -DWITH_MEMCACHE=1
+  when: not mapcache.stat.exists
 
 - name: Make mapcache
   command:
     chdir={{ src_dir }}/mapcache/build
     make
+  when: not mapcache.stat.exists
 
 - name: Install mapcache
   command:
-    chdir={{ src_dir }}/mapcache/build
+    chdir={{ src_dir }}/{{ mapserver_version }}/build
     make install
+  when: not mapcache.stat.exists
 
-- name: Create the directory that contains mapcache
-  file: path=/opt/mapcache state=directory owner=apache group=apache
-
-- copy:
-    src: 01-mapcache.conf
-    dest: /etc/httpd/conf.modules.d
-
-- copy:
-    src: mapcache.conf
-    dest: /etc/httpd/conf.d
-
-- copy:
-    remote_src: True
-    src: /usr/local/src/mapcache/mapcache.xml
-    dest: /opt/mapcache/mapcache.xml
-
-##########
-# Apache Settings
+- name: Check whether httpd.conf contains "LD_LIBRARY_PATH"
+  command:
+    grep LD_LIBRARY_PATH /etc/httpd/conf/httpd.conf
+  register:
+    check_mapserver_settings
+  failed_when: check_mapserver_settings.rc not in [0, 1]
+  changed_when: False
 
 # To Create the patch file:
 # 1. login remote redmine server
@@ -185,11 +173,7 @@
     src=httpd.conf.patch
     dest=/etc/httpd/conf/httpd.conf
     backup=yes
-  ignore_errors: yes
-
-- name: update shared lib settings (ldconfig)
-  command:
-    ldconfig
+  when: check_mapserver_settings.rc == 1
 
 - name: Restart apache
   service:

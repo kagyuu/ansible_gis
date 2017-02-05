@@ -1,4 +1,7 @@
-256,257c256,259
+20a21,22
+> SetEnv LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:/usr/pgsql-9.6/lib
+> 
+256,257c258,262
 <     AllowOverride None
 <     Options None
 ---
@@ -6,3 +9,4 @@
 >     # Options None
 >     AllowOverride All
 >     Options FollowSymLinks Includes ExecCGI
+> 
