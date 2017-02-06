@@ -35,4 +35,4 @@ Ansible Playbook for GIS Application
   - You need not install the glassfish, if you want to install only mapserver
     and mapcache.
   - The glassfish has JDBC Connection pool to the PostGIS server. See management
-    console https://localhost:14848 (for Vagrant ) or http://server:4848/.
+    console https://localhost:14848 (for Vagrant ) or https://server:4848/.
