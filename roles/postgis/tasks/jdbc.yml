@@ -6,6 +6,7 @@
   git:
     repo=https://github.com/postgis/postgis-java.git
     dest="{{ src_dir }}/postgis-java"
+    version="v2.1-maintenance"
     force=yes
 
 - name: build postgis jdbc driver

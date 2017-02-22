@@ -22,13 +22,19 @@
     - gcc
     - gcc-c++
     - swig
-    - python-devel
-    - java-1.8.0-openjdk-devel
-    - httpd-devel
+
+- name: Install GIS tool
+  yum: name={{ item }} state=present
+  with_items:
+    - gdal
+    - gdal-python
 
 - name: Install required libraries for mapserver
   yum: name="{{ item }}-devel" state=present
   with_items:
+    - python
+    - java-1.8.0-openjdk
+    - httpd
     # Required External Libraries
     - libpng
     - freetype
