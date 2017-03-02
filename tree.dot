@@ -1,0 +1,161 @@
+digraph tree {
+  charset="latin1";
+  fontsize="10px";
+  rankdir=LR;
+  fixedsize=true;
+  constraint=false;
+  node [style="rounded,filled", shape=folder, fillcolor="lightgray"]
+
+  "ansible_gis/"
+
+  "private_key" [shape=note, fillcolor="green"]
+  "ansible_gis/" -> ".vagrant/" -> "machines/" -> "gis/" -> "virtualbox/" -> "private_key"
+
+  "Vagrantfile" [shape=note, fillcolor="green"]
+  "ansible.cfg" [shape=note, fillcolor="khaki"]
+  "gis.yml" [shape=note, fillcolor="red"]
+  "glassfish.yml" [shape=note, fillcolor="khaki"]
+  "proxy.yml" [shape=note, fillcolor="khaki"]
+  "hosts" [shape=note, fillcolor="khaki"]
+
+  "ansible_gis/" -> "Vagrantfile"
+  "ansible_gis/" -> "ansible.cfg"
+  "ansible_gis/" -> "gis.yml"
+  "ansible_gis/" -> "glassfish.yml"
+  "ansible_gis/" -> "proxy.yml"
+  "ansible_gis/" -> "hosts"
+
+  {
+    "all.yml" [shape=note, fillcolor="khaki"]
+    "vagrant.yml" [shape=note, fillcolor="khaki"]
+    "ansible_gis/" -> "group_vars/"
+    "group_vars/" -> "all.yml"
+    "group_vars/" -> "vagrant.yml"
+  }
+
+  {
+    host_vars_gis_yml [label="gis.yml" shape=note, fillcolor="khaki"]
+    "ansible_gis/" -> "host_vars/" -> host_vars_gis_yml
+  }
+
+  hosts -> "vagrant.yml" [style=dotted, dir=none]
+  hosts -> host_vars_gis_yml [style=dotted, dir=none]
+
+  gis_roles [label="roles/", fillcolor="pink"]
+  "ansible_gis/" -> gis_roles
+
+  {
+    "mapserver/" [fillcolor="pink"]
+    gis_roles -> "mapserver/"
+    mapserver_files [label="files/"]
+    mapserver_tasks [label="tasks/", fillcolor="pink"]
+    mapserver_vars [label="vars/"]
+
+    "mapserver/" -> mapserver_files
+    "mapserver/" -> mapserver_tasks
+    "mapserver/" -> mapserver_vars
+
+    "01-mapcache.conf" [shape=note, fillcolor="khaki"]
+    "httpd.conf.patch" [shape=note, fillcolor="khaki"]
+    "mapcache.conf" [shape=note, fillcolor="khaki"]
+    mapserver_files -> "01-mapcache.conf"
+    mapserver_files -> "httpd.conf.patch"
+    mapserver_files -> "mapcache.conf"
+
+    mapserver_task_main [label="main.yml", shape=note, fillcolor="pink"]
+    mapserver_tasks -> mapserver_task_main
+
+    mapserver_vars_main [label="main.yml", shape=note, fillcolor="khaki"]
+    mapserver_vars -> mapserver_vars_main
+  }
+  {
+    "postgis/" [fillcolor="pink"]
+    gis_roles -> "postgis/"
+    postgis_tasks [label="tasks/", fillcolor="pink"]
+    postgis_vars [label="vars/"]
+
+    "postgis/" -> postgis_tasks
+    "postgis/" -> postgis_vars
+
+    postgis_tasks_main [label="main.yml", shape=note, fillcolor="pink"]
+    "jdbc.yml" [label="main.yml", shape=note, fillcolor="khaki"]
+    postgis_tasks -> postgis_tasks_main
+    postgis_tasks -> "jdbc.yml"
+
+    postgis_vars_main [label="main.yml", shape=note, fillcolor="khaki"]
+    postgis_vars -> postgis_vars_main
+  }
+
+  "ansible_common/"
+  common_roles [label="roles/", fillcolor="pink"]
+  "ansible_common/" -> common_roles
+
+  {
+    "common/" [fillcolor="pink"]
+    common_roles -> "common/"
+    common_files [label="files/"]
+    common_handlers [label="handlers/"]
+    common_tasks [label="tasks/", fillcolor="pink"]
+
+    "common/" -> common_files
+    "common/" -> common_handlers
+    "common/" -> common_tasks
+
+    "local.conf" [shape=note, fillcolor="khaki"]
+    common_files -> "local.conf"
+
+    common_handlers_main [label="main.yml", shape=note, fillcolor="khaki"]
+    common_handlers -> common_handlers_main
+
+    common_tasks_main [label="main.yml", shape=note, fillcolor="pink"]
+    common_tasks -> common_tasks_main
+  }
+
+  {
+    "maven/" [fillcolor="pink"]
+    common_roles -> "maven/"
+    maven_tasks [label="tasks/", fillcolor="pink"]
+    maven_templates [label="tempaltes/"]
+    maven_vars [label="vars/"]
+
+    "maven/" -> maven_tasks
+    "maven/" -> maven_templates
+    "maven/" -> maven_vars
+
+    maven_tasks_main [label="main.yml", shape=note, fillcolor="pink"]
+    maven_tasks -> maven_tasks_main
+
+    "settings0.xml" [shape=note, fillcolor="khaki"]
+    "settings1.xml" [shape=note, fillcolor="khaki"]
+    maven_templates -> "settings0.xml"
+    maven_templates -> "settings1.xml"
+
+    maven_vars_main [label="main.yml", shape=note, fillcolor="khaki"]
+    maven_vars -> maven_vars_main
+  }
+
+  {
+    "firewalld/" [fillcolor="pink"]
+    common_roles -> "firewalld/"
+    firewalld_tasks [label="tasks/", fillcolor="pink"]
+    firewalld_vars [label="vars/"]
+
+    "firewalld/" -> firewalld_tasks
+    "firewalld/" -> firewalld_vars
+
+    firewalld_tasks_main [label="main.yml", shape=note, fillcolor="pink"]
+    firewalld_tasks -> firewalld_tasks_main
+
+    firewalld_vars_main [label="main.yml", shape=note, fillcolor="khaki"]
+    firewalld_vars -> firewalld_vars_main
+  }
+
+  common_roles -> "glassfish/"
+  common_roles -> "http_proxy/"
+  common_roles -> "ldap/"
+  common_roles -> "ldapadmin/"
+  common_roles -> "postgres/"
+  common_roles -> "pwm/"
+  common_roles -> "ruby/"
+  common_roles -> "tomcat/"
+}
