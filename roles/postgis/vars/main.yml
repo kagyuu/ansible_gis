@@ -3,3 +3,13 @@
 PG_VER: "9"
 PG_REV: "6"
 src_dir: /usr/local/src
+
+# Note. The mapserver needs libraries of postgis.
+# If you want to change PG_VER ans PG_REV, don't forget update playbook
+# of the mapserver, too. The argument of cmake has PG_VER and PG_REV.
+#
+## - name: Configure mapserver
+##   command:
+##     chdir={{ src_dir }}/{{ mapserver_version }}/build
+##     cmake -DCMAKE_PREFIX_PATH=/usr/pgsql-9.6 \
+##     ...                                  ^^^
