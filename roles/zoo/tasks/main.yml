@@ -1,0 +1,84 @@
+- name: Install libraries
+  yum: name={{ item }} state=present
+  with_items:
+    - armadillo-devel
+    - libuuid-devel
+    - autoconf
+    - bison
+    - byacc
+    - flex
+    - CGAL-devel
+
+# default timeout is 10sec, but its too tight for zoo-project
+- name: Download zoo source
+  get_url:
+    url: http://zoo-project.org/dl/zoo-project-{{ zoo_version }}.tar.bz2
+    dest: "{{ src_dir }}"
+    timeout: 60
+
+- name: Expand zoo source
+  command:
+    chdir={{ src_dir }}
+    tar xf zoo-project-{{ zoo_version }}.tar.bz2
+
+- name: Build cgic
+  replace:
+    dest={{ src_dir }}/zoo-project-{{ zoo_version }}/thirds/cgic206/Makefile
+    regexp='\/usr\/lib\/libfcgi.a' replace='/usr/lib64/libfcgi.so' backup=yes
+
+- command:
+    chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/thirds/cgic206
+    make
+
+- name: Create the directory that contains zoofile
+  file: path=/opt/zoo-project state=directory owner=apache group=apache
+
+- name: Confibure zoo
+  shell:
+    chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-kernel
+    autoconf &&
+    JVM=`find /usr -name "jni.h" | sed -e "s/include.*//"` &&
+    ./configure \
+      --with-cgi-dir=/var/www/cgi-bin \
+      --with-etc-dir=yes --sysconfdir=/opt/zoo-project \
+      --with-python=yes \
+      --with-java=${JVM}
+
+- name: Make zoo
+  command:
+    chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-kernel
+    make
+
+- name: Install zoo
+  command:
+    chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-kernel
+    make install
+
+- name: Copy zoo/main.config
+  copy:
+    src: "{{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-kernel/main.cfg"
+    dest: /opt/zoo-project/main.cfg
+    owner: apache
+    group: apache
+    mode: 0644
+    remote_src: True
+
+- name: add shared jvm.so to /usr/local/lib
+  shell:
+    ln -s `find / -name libjvm.so` /usr/local/lib
+
+- name: Make zoo library for java
+  command:
+    chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-api/java
+    make
+
+- name: Copy libZoo.so
+  copy:
+    src: "{{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-api/java/libZOO.so"
+    dest: /usr/local/lib/libZOO.so
+    force: True
+    remote_src: True
+
+- name: update shared library cache
+  command:
+    ldconfig
