@@ -7,7 +7,13 @@
   environment: "{{ proxy_env }}"
   roles:
     - ../ansible_common/common
-    - ../ansible_common/maven
     - { role: postgis, db_name: gis, db_passwd: password }
     - mapserver
-    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp"] }
+    - zoo
+    - ../ansible_common/maven
+    - { role: ../ansible_common/glassfish
+        , db_name: gis
+        , db_passwd: password
+        , db: postgis
+      }
+    - { role: ../ansible_common/firewalld, PORTS:["80/tcp","443/tcp","5432/tcp","4848/tcp","8080/tcp"] }

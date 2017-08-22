@@ -96,6 +96,7 @@
     - "grant usage on schema topology to {{ db_name }};"
     - "grant all on all tables in schema topology to {{ db_name }};"
     - "grant usage, select on all sequences in schema topology to {{ db_name }};"
+  ignore_errors: yes
 
 - name: Check Postgis Status
   sudo: yes
@@ -114,5 +115,3 @@
   register: pgroot_result
 
 - debug: var=pgroot_result.stdout_lines
-
-- include: tasks/jdbc.yml

@@ -33,7 +33,7 @@
 - name: Create the directory that contains zoofile
   file: path=/opt/zoo-project state=directory owner=apache group=apache
 
-- name: Confibure zoo
+- name: Configure zoo
   shell:
     chdir={{ src_dir }}/zoo-project-{{ zoo_version }}/zoo-project/zoo-kernel
     autoconf &&
@@ -82,3 +82,9 @@
 - name: update shared library cache
   command:
     ldconfig
+
+- name: Restart apache
+  service:
+    name=httpd
+    state=restarted
+    enabled=yes
