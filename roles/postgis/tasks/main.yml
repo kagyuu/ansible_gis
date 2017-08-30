@@ -9,8 +9,10 @@
     url: https://download.postgresql.org/pub/repos/yum/{{ PG_VER }}.{{ PG_REV }}/redhat/rhel-7-x86_64/pgdg-centos{{ PG_VER }}{{ PG_REV }}-{{ PG_VER }}.{{ PG_REV }}-3.noarch.rpm
     dest: /tmp
     validate_certs: false
+  when: (init is not defined) or (init)
 
 - yum: name=/tmp/pgdg-centos{{ PG_VER }}{{ PG_REV }}-{{ PG_VER }}.{{ PG_REV }}-3.noarch.rpm state=present
+  when: (init is not defined) or (init)
 
 - name: Install PostgreSQL
   yum: name={{ item }}  state=present
@@ -25,6 +27,7 @@
     - ogr_fdw{{ PG_VER }}{{ PG_REV }}
     - pgrouting_{{ PG_VER }}{{ PG_REV }}
     - python-psycopg2
+  when: (init is not defined) or (init)
 
 - name: PostgreSQL initdb
   command:
@@ -33,6 +36,13 @@
     initdb_result
   failed_when: initdb_result.rc not in [0, 1]
   changed_when: initdb_result.rc == 0
+  when: (init is not defined) or (init)
+
+- lineinfile:
+    dest=/var/lib/pgsql/{{ PG_VER }}.{{ PG_REV }}/data/postgresql.conf
+    insertbefore="#listen_addresses = 'localhost'"
+    line="listen_addresses = '*'"
+  when: (init is not defined) or (init)
 
 - name: append access settings
   lineinfile:
@@ -43,11 +53,6 @@
     - 'host    {{ db_name }}         {{ db_name }}         0.0.0.0/0               md5'
     - 'host    {{ db_name }}         {{ db_name }}         127.0.0.1/32            md5'
     - 'host    {{ db_name }}         {{ db_name }}         ::1/128                 md5'
-
-- lineinfile:
-    dest=/var/lib/pgsql/{{ PG_VER }}.{{ PG_REV }}/data/postgresql.conf
-    insertbefore="#listen_addresses = 'localhost'"
-    line="listen_addresses = '*'"
 
 - name: PostgreSQL service setup
   service:
