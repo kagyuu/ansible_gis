@@ -3,7 +3,8 @@
 
 Vagrant.configure(2) do |config|
   config.vm.box = "centos/7"
-
+  config.vm.box_url = "https://app.vagrantup.com/centos/boxes/7"
+  
   config.vm.provider "virtualbox" do |vb|
     vb.cpus = 2
     vb.memory = 1024
